@@ -1,37 +1,16 @@
 # kaggle-new-york-city-taxi-fare-prediction
 
-#### 项目介绍
+## 项目介绍
+
+本项目主要用以存储`New York City Taxi Fare Prediction`竞赛中的相关笔记以及代码.
+
 https://www.kaggle.com/c/new-york-city-taxi-fare-prediction
 
-#### 软件架构
-软件架构说明
+## 软件架构
 
-
-#### 安装教程
-
-1. xxxx
-2. xxxx
-3. xxxx
-
-#### 使用说明
-
-1. xxxx
-2. xxxx
-3. xxxx
-
-#### 参与贡献
-
-1. Fork 本项目
-2. 新建 Feat_xxx 分支
-3. 提交代码
-4. 新建 Pull Request
-
-
-#### 码云特技
-
-1. 使用 Readme\_XXX.md 来支持不同的语言，例如 Readme\_en.md, Readme\_zh.md
-2. 码云官方博客 [blog.gitee.com](https://blog.gitee.com)
-3. 你可以 [https://gitee.com/explore](https://gitee.com/explore) 这个地址来了解码云上的优秀开源项目
-4. [GVP](https://gitee.com/gvp) 全称是码云最有价值开源项目，是码云综合评定出的优秀开源项目
-5. 码云官方提供的使用手册 [https://gitee.com/help](https://gitee.com/help)
-6. 码云封面人物是一档用来展示码云会员风采的栏目 [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+| 文件夹       | 说明 |
+| ------------ | ---- |
+| code         | 用以存储代码, 需要根据不同的项目属性配置对应的`.gitignore`文件 |
+| data         | 用以存储数据文件, 已经在`.gitignore`文件中忽略对应的`csv`和`zip`文件. 将kaggle网站上下载到的文件保持原始命名放在此目录下 |
+| document     | 用以存储相应的文档 |
+| model         |用以存储训练出的模型|
