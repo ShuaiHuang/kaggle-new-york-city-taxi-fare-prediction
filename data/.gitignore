@@ -3,3 +3,4 @@
 *.npz
 *.np
 *.model
+*.feather
