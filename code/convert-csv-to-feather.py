@@ -27,11 +27,11 @@ if __name__ == '__main__':
     train_csv_path = os.path.join(FLAGS.data_path, FLAGS.input_dir, FLAGS.train_data)
     test_csv_path = os.path.join(FLAGS.data_path, FLAGS.input_dir, FLAGS.test_data)
 
-    train_org_path, _ = os.path.splitext(train_csv_path)
-    test_org_path, _ = os.path.splitext(test_csv_path)
+    train_filename_org, _ = os.path.splitext(FLAGS.train_data)
+    test_filename_org, _ = os.path.splitext(FLAGS.test_data)
 
-    train_feature_path = train_org_path + '.feather'
-    test_feature_path = test_org_path + '.feather'
+    train_feature_path = os.path.join(FLAGS.data_path, FLAGS.output_dir, train_filename_org+'.feather')
+    test_feature_path = os.path.join(FLAGS.data_path, FLAGS.output_dir, test_filename_org+'.feather')
 
     columns_type = {
         'key': 'str',
