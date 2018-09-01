@@ -39,7 +39,9 @@ def get_output_file_path(input_file_path, output_file_dir, output_data_formation
 
     if output_data_formation == 'feather':
         filename_base, _ = os.path.splitext(filename)
-        filename = filename_base + '.feather'
+        filename = 'cleaned_%s.feather'%(filename_base,)
+    else:
+        filename = 'cleaned_%s'%(filename,)
 
     output_file_path = os.path.join(output_file_dir, filename)
     return output_file_path
@@ -117,6 +119,7 @@ if __name__ == '__main__':
         reg_exp = r'chunk.*\.csv|test.csv'
     chunk_files = get_chunk_files(data_dir, reg_exp)
     logging.debug(chunk_files)
+    chunk_files = ['test.feather', 'chunk_011_train.feather']
     for file in chunk_files:
         file_path = os.path.join(data_dir, file)
         output_file_path = get_output_file_path(file_path, data_dir, FLAGS.output_data_formation)
