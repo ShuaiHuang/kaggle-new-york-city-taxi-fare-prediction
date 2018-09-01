@@ -6,6 +6,7 @@ import argparse
 import pandas as pd
 import datetime as dt
 
+
 def get_chunk_files(input_path, reg_exp):
     file_list = os.listdir(input_path)
     chunk_file_list = []
@@ -14,6 +15,7 @@ def get_chunk_files(input_path, reg_exp):
             chunk_file_list.append(item)
     chunk_file_list.sort()
     return chunk_file_list
+
 
 def parse_date_time(input_file_path, output_file_dir=None):
     path, filename = os.path.split(input_file_path)
@@ -26,15 +28,14 @@ def parse_date_time(input_file_path, output_file_dir=None):
         chunk_df = pd.read_csv(file_path)
         chunk_df['pickup_timezone'] = chunk_df['pickup_datetime'].str.extract(r'\d+-\d+\-\d+\s\d+:\d+:\d+\s([A-Z]{3})',
                                                                               expand=False)
-        chunk_df['pickup_datetime'] = chunk_df['pickup_datetime'].map(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S UTC'))
-        chunk_df['pickup_year'] = chunk_df['pickup_datetime'].map(lambda x: x.year)
-        chunk_df['pickup_month'] = chunk_df['pickup_datetime'].map(lambda x: x.month)
-        chunk_df['pickup_day'] = chunk_df['pickup_datetime'].map(lambda x: x.day)
-        chunk_df['pickup_hour'] = chunk_df['pickup_datetime'].map(lambda x: x.hour)
-        chunk_df['pickup_minute'] = chunk_df['pickup_datetime'].map(lambda x: x.minute)
-        chunk_df['pickup_second'] = chunk_df['pickup_datetime'].map(lambda x: x.second)
-        chunk_df['pickup_weekday'] = chunk_df['pickup_datetime'].map(lambda x: x.weekday())
-        chunk_df = chunk_df.drop(columns='pickup_datetime')
+        chunk_df['pickup_datetime_obj'] = chunk_df['pickup_datetime'].map(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S UTC'))
+        chunk_df['pickup_year'] = chunk_df['pickup_datetime_obj'].map(lambda x: x.year)
+        chunk_df['pickup_month'] = chunk_df['pickup_datetime_obj'].map(lambda x: x.month)
+        chunk_df['pickup_day'] = chunk_df['pickup_datetime_obj'].map(lambda x: x.day)
+        chunk_df['pickup_hour'] = chunk_df['pickup_datetime_obj'].map(lambda x: x.hour)
+        chunk_df['pickup_minute'] = chunk_df['pickup_datetime_obj'].map(lambda x: x.minute)
+        chunk_df['pickup_second'] = chunk_df['pickup_datetime_obj'].map(lambda x: x.second)
+        chunk_df['pickup_weekday'] = chunk_df['pickup_datetime_obj'].map(lambda x: x.weekday())
         chunk_df.to_csv(cleaned_file_path, index=False)
 
 
