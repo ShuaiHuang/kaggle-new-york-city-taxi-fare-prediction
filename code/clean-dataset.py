@@ -139,7 +139,6 @@ if __name__ == '__main__':
         reg_exp = r'chunk.*\.csv|test.csv'
     chunk_files = get_chunk_files(data_dir, reg_exp)
     logging.debug(chunk_files)
-    # chunk_files = ['test.feather', 'chunk_011_train.feather']
     for file in chunk_files:
         file_path = os.path.join(data_dir, file)
         output_file_path = get_output_file_path(file_path, data_dir, FLAGS.output_data_formation)
@@ -147,7 +146,8 @@ if __name__ == '__main__':
         logging.debug('cleaning %s'%(file_path,))
         df = parse_date_time(df)
         df = calculate_distance(df)
-        df = drop_records(df)
+        if 'test' not in file:
+            df = drop_records(df)
         write_data_frame_to_file(df, output_file_path, FLAGS.output_data_formation)
         end_time = dt.datetime.now()
         logging.debug('done in %s'%(end_time-start_time,))
