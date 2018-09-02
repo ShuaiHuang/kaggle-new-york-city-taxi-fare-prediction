@@ -9,3 +9,4 @@
 | [clean-dataset.py](./clean-dataset.py) | 原始数据清洗和特征提取脚本. |
 | [generate-dataset-for-training.py](./generate-dataset-for-training.py) | 将清洗后的数据转换为模型输入格式. |
 | [train-model.py](./train-model.py) | 训练XGBoost模型. |
+| [predict-test-dataset.py](./predict-test-dataset.py) | 使用训练好的模型对测试集进行预测. |
