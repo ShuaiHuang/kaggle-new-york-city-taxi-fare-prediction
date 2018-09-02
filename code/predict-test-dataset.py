@@ -28,7 +28,7 @@ if __name__ == '__main__':
                             default=None)
     arg_parser.add_argument('--model_md5',
                             type=str,
-                            default='6e6f556555d7af3dffe2858d59a40155')
+                            default='954debf1dd5ddfa5f94d06249ffcf398')
     FLAGS, _ = arg_parser.parse_known_args()
 
     train_data_dir = os.path.join(FLAGS.prj_dir, FLAGS.data_dir, FLAGS.train_data_dir)
@@ -63,5 +63,5 @@ if __name__ == '__main__':
     submission_path = os.path.join(train_data_dir, submission_filename)
     test_df = test_df.filter(items=['key', 'fare_amount'])
     test_df.to_csv(submission_path, index=False)
-    logging.debug('done!')
+    logging.debug('%s done!', submission_filename)
 
