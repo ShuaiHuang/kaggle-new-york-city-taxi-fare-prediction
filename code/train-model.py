@@ -101,6 +101,7 @@ if __name__ == '__main__':
                                 label=validate_data_df['fare_amount'])
     eval_list = [(validate_data, 'eval')]
     num_round = param['num_round']
+    early_stop_rounds = param['early_stop_rounds']
 
     train_data_file_list = ['cleaned_chunk_001_train.feather']
     progress_info = dict()
@@ -111,12 +112,23 @@ if __name__ == '__main__':
         chunk_train_data = xgb.DMatrix(chunk_train_data_df.drop(columns=['key', 'fare_amount'], axis=1),
                                        label=chunk_train_data_df['fare_amount'])
         if count == 0:
-            xgb_model = xgb.train(param, chunk_train_data, num_round, eval_list, evals_result=progress_info)
+            xgb_model = xgb.train(param['model_param'],
+                                  chunk_train_data,
+                                  num_round,
+                                  eval_list,
+                                  evals_result=progress_info,
+                                  early_stopping_rounds=early_stop_rounds)
         else:
             param['process_type'] = 'update'
             param['updater'] = 'refresh'
             param['refresh_leaf'] = 1
-            xgb_model = xgb.train(param, chunk_train_data, num_round, eval_list, xgb_model=model_path, evals_result=progress_info)
+            xgb_model = xgb.train(param,
+                                  chunk_train_data,
+                                  num_round,
+                                  eval_list,
+                                  xgb_model=model_path,
+                                  evals_result=progress_info,
+                                  early_stopping_rounds=early_stop_rounds)
         logging.debug('done!')
 
         xgb_model.save_model(model_path)
