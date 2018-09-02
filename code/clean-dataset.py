@@ -106,7 +106,8 @@ def haversine_distance(lat1, long1, lat2, long2):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    LOG_FORMAT = '[%(asctime)s] [%(lineno)d] [%(levelname)s] %(message)s'
+    logging.basicConfig(level=logging.DEBUG, format=LOG_FORMAT)
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('--prj_dir',
                             type=str,
