@@ -1,0 +1,19 @@
+{
+  "eta": 0.1,
+  "gamma": 0,
+  "max_depth": 15,
+  "min_child_weight": 10,
+  "max_delta_step": 0,
+  "subsample": 0.8,
+  "colsample_bytree": 0.7,
+  "colsample_bylevel": 1,
+  "lambda": 70,
+  "alpha": 0,
+  "tree_method": "gpu_hist",
+  "objective": "reg:linear",
+  "eval_metric": "rmse",
+  "nthread": 6,
+  "silent": 0,
+  "seed": 43,
+  "num_round": 100
+}
