@@ -1,6 +1,6 @@
 {
   "model_param": {
-    "eta": 0.05,
+    "eta": 0.5,
     "gamma": 10,
     "max_depth": 15,
     "min_child_weight": 10,
@@ -17,6 +17,6 @@
     "silent": 0,
     "seed": 43
   },
-  "num_round": 1000,
+  "num_round": 300,
   "early_stop_rounds": 20
 }
