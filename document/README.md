@@ -44,3 +44,14 @@
 - 时间特征使用UTC时间, 改成夏时令更好;
 - 地理位置特征未做加工, 需要进一步进行细化.
 
+## 20180903
+
+### 环境配置
+
+1. `Anaconda`环境配置 Python3
+2. `PyCharm` IDE配置
+3. `conda install numpy feather`
+
+### 用到的模型
+
+1. [`xgboost`](http://dl.acm.org/citation.cfm?doid=2939672.2939785)
