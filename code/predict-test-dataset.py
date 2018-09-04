@@ -28,7 +28,7 @@ if __name__ == '__main__':
                             default=None)
     arg_parser.add_argument('--model_md5',
                             type=str,
-                            default='954debf1dd5ddfa5f94d06249ffcf398')
+                            default='d925295ca50d7918e358e3f6f35b1e46')
     FLAGS, _ = arg_parser.parse_known_args()
 
     train_data_dir = os.path.join(FLAGS.prj_dir, FLAGS.data_dir, FLAGS.train_data_dir)

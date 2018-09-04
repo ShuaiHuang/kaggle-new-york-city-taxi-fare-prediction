@@ -17,6 +17,6 @@
     "silent": 0,
     "seed": 43
   },
-  "num_round": 500,
-  "early_stop_rounds": "None"
+  "num_round": 1000,
+  "early_stop_rounds": 0
 }

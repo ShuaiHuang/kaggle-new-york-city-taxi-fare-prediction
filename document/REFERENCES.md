@@ -6,3 +6,8 @@
 - [使用`feather`标准提升数据读写速度](https://www.kaggle.com/ahsanmemon/saving-time-quick-read-55-million-values)
 - [除了GoogleMap之外还提到了一个开源的工程用以计算距离信息](https://www.kaggle.com/c/new-york-city-taxi-fare-prediction/discussion/62738)
 - [EDA和数据清洗比较清晰的Kernel](https://www.kaggle.com/madhurisivalenka/cleansing-eda-modelling-lgbm-xgboost-starters)
+- [使用多线程加速](https://www.kaggle.com/c/new-york-city-taxi-fare-prediction/discussion/63474)
+- [机场载客/下客特征](https://www.kaggle.com/c/new-york-city-taxi-fare-prediction/discussion/63098)
+- [道路堵塞程度特征](https://www.kaggle.com/c/new-york-city-taxi-fare-prediction/discussion/62637)
+- [快速打开大文件&节省内存方法](https://www.kaggle.com/szelee/how-to-import-a-csv-file-of-55-million-rows)
+- [榜单优秀Kernel总结](https://www.kaggle.com/szelee/averaging-top-3-results-lb-2-97972)

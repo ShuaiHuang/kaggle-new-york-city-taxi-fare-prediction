@@ -61,6 +61,31 @@ def parse_date_time(data_frame):
     return data_frame
 
 
+def extract_airport_location(data_frame):
+    # New York JohnFitzgerald Kennedy International Airport
+    data_frame['airport_jfk'] = 0
+    data_frame.loc[(data_frame['pickup_longitude'] >= -73.7841) & (data_frame['pickup_longitude'] <= -73.7721) & \
+                   (data_frame['pickup_latitude'] <= 40.6613) & (data_frame['pickup_latitude'] >= 40.6213),'airport_jfk'] = 1
+    data_frame.loc[(data_frame['dropoff_longitude'] >= -73.7841) & (data_frame['dropoff_longitude'] <= -73.7721) & \
+                   (data_frame['dropoff_latitude'] <= 40.6613) & (data_frame['dropoff_latitude'] >= 40.6213), 'airport_jfk'] = 1
+
+    # LaGuardia Airport
+    data_frame['airport_lga'] = 0
+    data_frame.loc[(data_frame['pickup_longitude'] >= -73.8870) & (data_frame['pickup_longitude'] <= -73.8580) & \
+                   (data_frame['pickup_latitude'] <= 40.7800) & (data_frame['pickup_latitude'] >= 40.7680),'airport_lga'] = 1
+    data_frame.loc[(data_frame['dropoff_longitude'] >= -73.8870) & (data_frame['dropoff_longitude'] <= -73.8580) & \
+                   (data_frame['dropoff_latitude'] <= 40.7800) & (data_frame['dropoff_latitude'] >= 40.7680), 'airport_lga'] = 1
+
+    # Newark Liberty International Airport
+    data_frame['airport_ewr'] = 0
+    data_frame.loc[(data_frame['pickup_longitude'] >= -74.192) & (data_frame['pickup_longitude'] <= -74.172) & \
+                   (data_frame['pickup_latitude'] <= 40.708) & (data_frame['pickup_latitude'] >= 40.676),'airport_ewr'] = 1
+    data_frame.loc[(data_frame['dropoff_longitude'] >= -74.192) & (data_frame['dropoff_longitude'] <= -74.172) & \
+                   (data_frame['dropoff_latitude'] <= 40.708) & (data_frame['dropoff_latitude'] >= 40.676), 'airport_ewr'] = 1
+
+    return data_frame
+
+
 def drop_records(data_frame):
     if 'fare_amount' in data_frame.columns:
         data_frame = data_frame.drop(data_frame[data_frame['fare_amount'] <= 0].index, axis=0)
@@ -82,7 +107,7 @@ def drop_records(data_frame):
 def calculate_distance(data_frame):
     data_frame['pickup_dropoff_distance'] = data_frame.apply(
         lambda row: haversine_distance(row['pickup_latitude'], row['pickup_longitude'], row['dropoff_latitude'], row['dropoff_longitude']),
-        axis=1)
+        axis=1).astype('float32')
     return data_frame
 
 def haversine_distance(lat1, long1, lat2, long2):
@@ -145,6 +170,7 @@ if __name__ == '__main__':
         df = read_data_frame_from_file(file_path, FLAGS.input_data_formation)
         logging.debug('cleaning %s'%(file_path,))
         df = parse_date_time(df)
+        df = extract_airport_location(df)
         df = calculate_distance(df)
         if 'test' not in file:
             df = drop_records(df)

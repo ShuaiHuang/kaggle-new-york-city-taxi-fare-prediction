@@ -18,7 +18,7 @@ def load_parameters_from_json(model_param_path):
 
     with open(model_param_path, 'rb') as json_file:
         json_md5_obj = hashlib.md5()
-        json_md5_obj.update(json_file.read())
+        json_md5_obj.update(json_file.read() + str(dt.datetime.now()).encode())
         json_md5_str = json_md5_obj.hexdigest()
 
     archive_json_filename = 'param_' + json_md5_str + '.json'
@@ -40,13 +40,13 @@ def load_dataset_file_list(train_data_dir):
 
 
 def split_train_validate_dataset(data_file_list):
-    train_file_list = data_file_list[:-1]
-    validate_file = data_file_list[-1]
-    return train_file_list, validate_file
+    train_file_list = data_file_list[:-2]
+    validate_file_list = data_file_list[-2:]
+    return train_file_list, validate_file_list
 
 
 def write_history_to_file(model_dir, json_md5_str, result):
-    log_file_path = os.path.join(model_dir, 'history.log')
+    log_file_path = os.path.join(model_dir, 'history.records')
     with open(log_file_path, 'a') as file_handler:
         content = '%s\t%s\t%f\n'%(dt.datetime.now(), json_md5_str, result)
         file_handler.write(content)
@@ -88,51 +88,57 @@ if __name__ == '__main__':
     param, param_md5_str = load_parameters_from_json(model_param_path)
 
     data_file_list = load_dataset_file_list(train_data_dir)
-    train_data_file_list, validate_data_filename = split_train_validate_dataset(data_file_list)
+    train_data_file_list, validate_data_file_list = split_train_validate_dataset(data_file_list)
     model_path = os.path.join(model_dir, 'xgb_'+param_md5_str+'.model')
     model_raw_path = os.path.join(model_dir, 'xgb_'+param_md5_str+'.model.raw.txt')
     logging.debug('train data filename: %s', train_data_file_list)
-    logging.debug('validate data filename: %s', validate_data_filename)
+    logging.debug('validate data filename: %s', validate_data_file_list)
 
-    validate_data_path = os.path.join(train_data_dir, validate_data_filename)
-    validate_data_df = pd.read_feather(validate_data_path)
-    logging.debug(validate_data_df.columns)
-    validate_data = xgb.DMatrix(validate_data_df.drop(columns=['key', 'fare_amount'], axis=1),
-                                label=validate_data_df['fare_amount'])
+    for count, filename in enumerate(validate_data_file_list):
+        logging.debug('loading dataset: [%03d, %s]', count, filename)
+        chunk_validate_path = os.path.join(train_data_dir, filename)
+        chunk_validate_df = pd.read_feather(chunk_validate_path)
+        if count == 0:
+            validate_df = chunk_validate_df
+        else:
+            validate_df = pd.concat([validate_df, chunk_validate_df], axis=0, ignore_index=True)
+    logging.debug('validate_df.shape %s', validate_df.shape)
+    logging.debug('validate_df.columns %s', validate_df.columns)
+    validate_data = xgb.DMatrix(validate_df.drop(columns=['key', 'fare_amount'], axis=1),
+                                label=validate_df['fare_amount'])
     eval_list = [(validate_data, 'eval')]
     num_round = param['num_round']
     early_stop_rounds = param['early_stop_rounds']
 
-    train_data_file_list = ['cleaned_chunk_001_train.feather']
+    train_data_file_list = ['cleaned_chunk_000_train.feather']
     progress_info = dict()
     for count, filename in enumerate(train_data_file_list):
-        logging.debug('training on %d-th dataset: %s', count, filename)
+        logging.debug('loading dataset: [%03d, %s]', count, filename)
         train_data_path = os.path.join(train_data_dir, filename)
         chunk_train_data_df = pd.read_feather(train_data_path)
-        chunk_train_data = xgb.DMatrix(chunk_train_data_df.drop(columns=['key', 'fare_amount'], axis=1),
-                                       label=chunk_train_data_df['fare_amount'])
-        if count == 0:
-            xgb_model = xgb.train(param['model_param'],
-                                  chunk_train_data,
-                                  num_round,
-                                  eval_list,
-                                  evals_result=progress_info,
-                                  early_stopping_rounds=early_stop_rounds)
-        else:
-            param['process_type'] = 'update'
-            param['updater'] = 'refresh'
-            param['refresh_leaf'] = 1
-            xgb_model = xgb.train(param,
-                                  chunk_train_data,
-                                  num_round,
-                                  eval_list,
-                                  xgb_model=model_path,
-                                  evals_result=progress_info,
-                                  early_stopping_rounds=early_stop_rounds)
-        logging.debug('done!')
 
-        xgb_model.save_model(model_path)
-        xgb_model.dump_model(model_raw_path)
+        if count == 0:
+            train_df = chunk_train_data_df
+        else:
+            train_df = pd.concat([train_df, chunk_train_data_df], 0, ignore_index=True)
+        logging.debug('train_df.shape %s', train_df.shape)
+
+    train_df_label = train_df['fare_amount']
+    train_df.drop(columns=['key', 'fare_amount'], axis=1, inplace=True)
+    train_data_buffer = xgb.DMatrix(train_df, label=train_df_label)
+    del train_df
+    del train_df_label
+
+    logging.debug('training model...')
+    xgb_model = xgb.train(param['model_param'],
+                          train_data_buffer,
+                          num_round,
+                          eval_list,
+                          evals_result=progress_info)
+    logging.debug('done!')
+
+    xgb_model.save_model(model_path)
+    xgb_model.dump_model(model_raw_path)
     logging.debug('save model: %s', model_path)
     logging.debug('save model: %s', model_raw_path)
     write_history_to_file(model_dir, param_md5_str, progress_info['eval']['rmse'][-1])

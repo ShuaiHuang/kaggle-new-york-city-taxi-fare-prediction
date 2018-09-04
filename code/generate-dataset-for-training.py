@@ -32,7 +32,8 @@ def convert_data_formation(data_frame):
     columns_to_keep = ['key', 'pickup_longitude', 'pickup_latitude',
                        'dropoff_longitude', 'dropoff_latitude', 'passenger_count',
                        'pickup_year', 'pickup_month', 'pickup_day',
-                       'pickup_weekday', 'pickup_hour', 'pickup_dropoff_distance']
+                       'pickup_weekday', 'pickup_hour', 'pickup_dropoff_distance',
+                       'airport_jfk', 'airport_lga', 'airport_ewr']
     if 'fare_amount'in data_frame.columns:
         columns_to_keep.append('fare_amount')
     data_frame = data_frame.filter(columns_to_keep)
