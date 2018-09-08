@@ -6,6 +6,14 @@ import argparse
 import numpy as np
 import pandas as pd
 import datetime as dt
+from pytz import timezone
+
+DROP_FLAG_DEFAULT = 0
+DROP_FLAG_SELECTED = -1
+DROP_FLAG_INVALID_VALUE = 1
+DROP_FLAG_INVALID_FARE = 2
+DROP_FLAG_INVALID_LOCATION = 3
+DROP_FLAG_INVALID_PASSENGER = 4
 
 
 def get_chunk_files(input_path, reg_exp):
@@ -29,7 +37,6 @@ def read_data_frame_from_file(input_file_path, input_data_formation=None):
 
 def write_data_frame_to_file(data_frame, output_file_path, output_data_formation=None):
     if output_data_formation == 'feather':
-        data_frame = data_frame.reset_index()
         data_frame.to_feather(output_file_path)
     else:
         data_frame.to_csv(output_file_path, index=False)
@@ -49,15 +56,17 @@ def get_output_file_path(input_file_path, output_file_dir, output_data_formation
 
 
 def parse_date_time(data_frame):
-    data_frame['pickup_timezone'] = data_frame['pickup_datetime'].str.extract(r'\d+-\d+\-\d+\s\d+:\d+:\d+\s([A-Z]{3})', expand=False)
-    data_frame['pickup_datetime_obj'] = data_frame['pickup_datetime'].map(lambda x: dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S UTC'))
-    data_frame['pickup_year'] = data_frame['pickup_datetime_obj'].map(lambda x: x.year)
-    data_frame['pickup_month'] = data_frame['pickup_datetime_obj'].map(lambda x: x.month)
-    data_frame['pickup_day'] = data_frame['pickup_datetime_obj'].map(lambda x: x.day)
-    data_frame['pickup_hour'] = data_frame['pickup_datetime_obj'].map(lambda x: x.hour)
-    data_frame['pickup_minute'] = data_frame['pickup_datetime_obj'].map(lambda x: x.minute)
-    data_frame['pickup_second'] = data_frame['pickup_datetime_obj'].map(lambda x: x.second)
-    data_frame['pickup_weekday'] = data_frame['pickup_datetime_obj'].map(lambda x: x.weekday())
+    utc_timezone = timezone('utc')
+    new_york_timezone = timezone('US/Eastern')
+    data_frame['pickup_datetime_utc'] = data_frame['pickup_datetime'].map(lambda x: utc_timezone.localize(dt.datetime.strptime(x, '%Y-%m-%d %H:%M:%S %Z')))
+    data_frame['pickup_datetime_local'] = data_frame['pickup_datetime_utc'].map(lambda x: x.astimezone(new_york_timezone))
+    data_frame['pickup_year'] = data_frame['pickup_datetime_local'].map(lambda x: x.year)
+    data_frame['pickup_month'] = data_frame['pickup_datetime_local'].map(lambda x: x.month)
+    data_frame['pickup_day'] = data_frame['pickup_datetime_local'].map(lambda x: x.day)
+    data_frame['pickup_hour'] = data_frame['pickup_datetime_local'].map(lambda x: x.hour)
+    data_frame['pickup_minute'] = data_frame['pickup_datetime_local'].map(lambda x: x.minute)
+    data_frame['pickup_second'] = data_frame['pickup_datetime_local'].map(lambda x: x.second)
+    data_frame['pickup_weekday'] = data_frame['pickup_datetime_local'].map(lambda x: x.weekday())
     return data_frame
 
 
@@ -83,23 +92,33 @@ def extract_airport_location(data_frame):
     data_frame.loc[(data_frame['dropoff_longitude'] >= -74.192) & (data_frame['dropoff_longitude'] <= -74.172) & \
                    (data_frame['dropoff_latitude'] <= 40.708) & (data_frame['dropoff_latitude'] >= 40.676), 'airport_ewr'] = 1
 
+    data_frame.loc[(data_frame['airport_jfk'] == 1) & (data_frame['drop_flag'] == DROP_FLAG_DEFAULT), 'drop_flag'] = DROP_FLAG_SELECTED
+    data_frame.loc[(data_frame['airport_lga'] == 1) & (data_frame['drop_flag'] == DROP_FLAG_DEFAULT), 'drop_flag'] = DROP_FLAG_SELECTED
+    data_frame.loc[(data_frame['airport_ewr'] == 1) & (data_frame['drop_flag'] == DROP_FLAG_DEFAULT), 'drop_flag'] = DROP_FLAG_SELECTED
+
     return data_frame
 
 
-def drop_records(data_frame):
+def clean_invalid_records(data_frame):
     if 'fare_amount' in data_frame.columns:
-        data_frame = data_frame.drop(data_frame[data_frame['fare_amount'] <= 0].index, axis=0)
+        data_frame.loc[data_frame['fare_amount'] <= 0, 'drop_flag'] = DROP_FLAG_INVALID_FARE
 
-    data_frame = data_frame.drop(data_frame[(data_frame['passenger_count'] <= 0) | (data_frame['passenger_count'] >= 9)].index, axis=0)
+    data_frame.loc[(data_frame['passenger_count'] <= 0) | (data_frame['passenger_count'] >= 9),
+                   'drop_flag'] = DROP_FLAG_INVALID_PASSENGER
 
-    data_frame = data_frame.drop(
-        data_frame[(data_frame['pickup_latitude'] < -90) | (data_frame['pickup_latitude'] > 90)].index, axis=0)
-    data_frame = data_frame.drop(
-        data_frame[(data_frame['pickup_longitude'] < -180) | (data_frame['pickup_longitude'] > 180)].index, axis=0)
-    data_frame = data_frame.drop(
-        data_frame[(data_frame['dropoff_latitude'] < -90) | (data_frame['dropoff_latitude'] > 90)].index, axis=0)
-    data_frame = data_frame.drop(
-        data_frame[(data_frame['dropoff_longitude'] < -180) | (data_frame['dropoff_longitude'] > 180)].index, axis=0)
+    data_frame.loc[(data_frame['pickup_latitude'] < -90) | (data_frame['pickup_latitude'] > 90),
+                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
+    data_frame.loc[(data_frame['pickup_longitude'] < -180) | (data_frame['pickup_longitude'] > 180),
+                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
+    data_frame.loc[(data_frame['dropoff_latitude'] < -90) | (data_frame['dropoff_latitude'] > 90),
+                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
+    data_frame.loc[(data_frame['dropoff_longitude'] < -180) | (data_frame['dropoff_longitude'] > -180),
+                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
+
+    data_frame.loc[(data_frame['pickup_longitude'] == 0) & (data_frame['pickup_latitude'] == 0),
+                   'drop_flag'] = DROP_FLAG_INVALID_LOCATION
+    data_frame.loc[(data_frame['dropoff_longitude'] == 0) & (data_frame['dropoff_latitude'] == 0),
+                   'drop_flag'] = DROP_FLAG_INVALID_LOCATION
 
     return data_frame
 
@@ -107,8 +126,9 @@ def drop_records(data_frame):
 def calculate_distance(data_frame):
     data_frame['pickup_dropoff_distance'] = data_frame.apply(
         lambda row: haversine_distance(row['pickup_latitude'], row['pickup_longitude'], row['dropoff_latitude'], row['dropoff_longitude']),
-        axis=1).astype('float32')
+        axis=1)
     return data_frame
+
 
 def haversine_distance(lat1, long1, lat2, long2):
     R = 6371  # radius of earth in kilometers
@@ -128,6 +148,39 @@ def haversine_distance(lat1, long1, lat2, long2):
     # d = R*c
     d = (R * c)  # in kilometers
     return d
+
+def add_drop_flag_column(data_frame):
+    data_frame['drop_flag'] = DROP_FLAG_DEFAULT
+    return data_frame
+
+def set_weekend_flag(data_frame):
+    data_frame['pickup_is_weekend'] = 0
+    data_frame.loc[(data_frame['pickup_weekday'] == 5) | (data_frame['pickup_weekday'] == 6),
+                   'pickup_is_weekend'] = 1
+    return data_frame
+
+
+def set_night_flag(data_frame):
+    data_frame['pickup_is_night'] = 0
+    data_frame.loc[(data_frame['pickup_hour'] >= 20) & (data_frame['pickup_hour'] <= 23), 'pickup_is_night'] = 1
+    data_frame.loc[(data_frame['pickup_hour'] >= 0) & (data_frame['pickup_hour'] < 6), 'pickup_is_night'] = 1
+    return data_frame
+
+
+def set_weekday_rush_hour_flag(data_frame):
+    data_frame['pickup_is_rush_hour'] = 0
+    data_frame.loc[(data_frame['pickup_weekday'] >= 0) & (data_frame['pickup_weekday'] <= 4) &
+                   (data_frame['pickup_hour'] >= 16) & (data_frame['pickup_hour'] < 20), 'pickup_is_rush_hour'] = 1
+    return data_frame
+
+
+def set_order_cancled_flag(data_frame):
+    data_frame['is_order_cancled'] = 0
+    data_frame.loc[(data_frame['pickup_longitude'] != 0) & (data_frame['pickup_latitude'] != 0) &
+                   (data_frame['pickup_longitude'] == data_frame['dropoff_longitude']) &
+                   (data_frame['pickup_latitude'] == data_frame['dropoff_latitude']),
+                    'is_order_cancled'] = 1
+    return data_frame
 
 
 if __name__ == '__main__':
@@ -164,16 +217,22 @@ if __name__ == '__main__':
         reg_exp = r'chunk.*\.csv|test.csv'
     chunk_files = get_chunk_files(data_dir, reg_exp)
     logging.debug(chunk_files)
+    # chunk_files=['chunk_000_train.feather', 'test.feather']
     for file in chunk_files:
         file_path = os.path.join(data_dir, file)
         output_file_path = get_output_file_path(file_path, data_dir, FLAGS.output_data_formation)
         df = read_data_frame_from_file(file_path, FLAGS.input_data_formation)
         logging.debug('cleaning %s'%(file_path,))
+        df = add_drop_flag_column(df)
         df = parse_date_time(df)
         df = extract_airport_location(df)
         df = calculate_distance(df)
+        df = set_weekend_flag(df)
+        df = set_weekday_rush_hour_flag(df)
+        df = set_order_cancled_flag(df)
+        df = set_night_flag(df)
         if 'test' not in file:
-            df = drop_records(df)
+            df = clean_invalid_records(df)
         write_data_frame_to_file(df, output_file_path, FLAGS.output_data_formation)
         end_time = dt.datetime.now()
         logging.debug('done in %s'%(end_time-start_time,))
