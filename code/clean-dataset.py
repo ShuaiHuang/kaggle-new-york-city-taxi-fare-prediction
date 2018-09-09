@@ -14,6 +14,7 @@ DROP_FLAG_INVALID_VALUE = 1
 DROP_FLAG_INVALID_FARE = 2
 DROP_FLAG_INVALID_LOCATION = 3
 DROP_FLAG_INVALID_PASSENGER = 4
+DROP_FLAG_INVALID_DATE = 5
 
 
 def get_chunk_files(input_path, reg_exp):
@@ -67,6 +68,9 @@ def parse_date_time(data_frame):
     data_frame['pickup_minute'] = data_frame['pickup_datetime_local'].map(lambda x: x.minute)
     data_frame['pickup_second'] = data_frame['pickup_datetime_local'].map(lambda x: x.second)
     data_frame['pickup_weekday'] = data_frame['pickup_datetime_local'].map(lambda x: x.weekday())
+
+    data_frame.loc[data_frame['pickup_year'] == 2008, 'drop_flag'] = DROP_FLAG_INVALID_DATE
+
     return data_frame
 
 

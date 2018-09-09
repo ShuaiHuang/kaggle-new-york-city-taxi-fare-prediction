@@ -33,7 +33,9 @@ def convert_data_formation(data_frame):
                        'dropoff_longitude', 'dropoff_latitude', 'passenger_count',
                        'pickup_year', 'pickup_month', 'pickup_day',
                        'pickup_weekday', 'pickup_hour', 'pickup_dropoff_distance',
-                       'airport_jfk', 'airport_lga', 'airport_ewr']
+                       'airport_jfk', 'airport_lga', 'airport_ewr',
+                       'pickup_is_weekend', 'pickup_is_night', 'pickup_is_rush_hour',
+                       'is_order_cancelled']
     if 'fare_amount'in data_frame.columns:
         columns_to_keep.append('fare_amount')
     data_frame = data_frame.filter(columns_to_keep)
@@ -94,11 +96,33 @@ if __name__ == '__main__':
     data_file_list = get_cleaned_file_list(process_data_dir, INPUT_FORMATION_IS_FEATHER)
     logging.debug(data_file_list)
 
+    sampled_df_for_train = pd.DataFrame()
+    df_for_test = None
     for filename in data_file_list:
         logging.debug('processing file: %s', filename)
         file_path = os.path.join(process_data_dir, filename)
         df = get_data_frame(file_path, INPUT_FORMATION_IS_FEATHER)
-        df = convert_data_formation(df)
-        output_file_path = os.path.join(train_data_dir, filename)
-        write_data_frame(df, output_file_path, OUTPUT_FORMATION_IS_FEATHER)
-        logging.debug('save file: %s', output_file_path)
+        if 'test' not in filename:
+            reserved_df = df[df['drop_flag'] < 0]
+            sampled_df = df[df['drop_flag'] == 0].sample(frac=0.1, random_state=43)
+            sampled_df_for_train = pd.concat([sampled_df_for_train, reserved_df, sampled_df], ignore_index=True, copy=False)
+        else:
+            df_for_test = df
+
+    # sampled_df_for_train.drop(index=sampled_df_for_train.loc[sampled_df_for_train['pickup_year']==2008, :].index, inplace=True)
+    # sampled_df_for_train.reset_index(drop=True, inplace=True)
+
+    sampled_df_for_train = convert_data_formation(sampled_df_for_train)
+    output_file_path = os.path.join(train_data_dir, 'cleaned_train.feather')
+    write_data_frame(sampled_df_for_train, output_file_path, OUTPUT_FORMATION_IS_FEATHER)
+    logging.debug('save file: %s', output_file_path)
+
+    df_for_test = convert_data_formation(df_for_test)
+    output_file_path = os.path.join(train_data_dir, 'cleaned_test.feather')
+    write_data_frame(df_for_test, output_file_path, OUTPUT_FORMATION_IS_FEATHER)
+    logging.debug('save file: %s', output_file_path)
+
+    logging.debug(sampled_df_for_train.shape)
+    logging.debug(sampled_df_for_train.columns)
+    logging.debug(df_for_test.shape)
+    logging.debug(df_for_test.columns)

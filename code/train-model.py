@@ -9,6 +9,7 @@ import argparse
 import pandas as pd
 import xgboost as xgb
 import datetime as dt
+from sklearn.model_selection import train_test_split
 
 
 def load_parameters_from_json(model_param_path):
@@ -28,15 +29,13 @@ def load_parameters_from_json(model_param_path):
     return param, json_md5_str
 
 
-def load_dataset_file_list(train_data_dir):
+def load_dataset_file(train_data_dir):
     file_list = os.listdir(train_data_dir)
-    dataset_file_list = []
-    reg_exp = r'cleaned\_chunk\_[0-9]{3}\_train.feather'
+    reg_exp = r'cleaned_train.feather'
     for file in file_list:
         if re.match(reg_exp, file) is not None:
-            dataset_file_list.append(file)
-        dataset_file_list.sort()
-    return dataset_file_list
+            return file
+    return None
 
 
 def split_train_validate_dataset(data_file_list):
@@ -87,53 +86,33 @@ if __name__ == '__main__':
 
     param, param_md5_str = load_parameters_from_json(model_param_path)
 
-    data_file_list = load_dataset_file_list(train_data_dir)
-    train_data_file_list, validate_data_file_list = split_train_validate_dataset(data_file_list)
+    data_file = load_dataset_file(train_data_dir)
     model_path = os.path.join(model_dir, 'xgb_'+param_md5_str+'.model')
     model_raw_path = os.path.join(model_dir, 'xgb_'+param_md5_str+'.model.raw.txt')
-    logging.debug('train data filename: %s', train_data_file_list)
-    logging.debug('validate data filename: %s', validate_data_file_list)
+    logging.debug('data filename: %s', data_file)
 
-    for count, filename in enumerate(validate_data_file_list):
-        logging.debug('loading dataset: [%03d, %s]', count, filename)
-        chunk_validate_path = os.path.join(train_data_dir, filename)
-        chunk_validate_df = pd.read_feather(chunk_validate_path)
-        if count == 0:
-            validate_df = chunk_validate_df
-        else:
-            validate_df = pd.concat([validate_df, chunk_validate_df], axis=0, ignore_index=True)
-    logging.debug('validate_df.shape %s', validate_df.shape)
-    logging.debug('validate_df.columns %s', validate_df.columns)
+    data_file_path = os.path.join(train_data_dir, data_file)
+    data_df = pd.read_feather(data_file_path)
+
+    train_df, validate_df = train_test_split(data_df, test_size=0.05, shuffle=True, random_state=param['model_param']['seed'])
+    logging.debug(train_df.shape)
+    logging.debug(validate_df.shape)
+
+    train_data = xgb.DMatrix(train_df.drop(columns=['key', 'fare_amount'], axis=1), label=train_df['fare_amount'])
+
     validate_data = xgb.DMatrix(validate_df.drop(columns=['key', 'fare_amount'], axis=1),
                                 label=validate_df['fare_amount'])
     eval_list = [(validate_data, 'eval')]
     num_round = param['num_round']
     early_stop_rounds = param['early_stop_rounds']
-
-    train_data_file_list = ['cleaned_chunk_000_train.feather']
     progress_info = dict()
-    for count, filename in enumerate(train_data_file_list):
-        logging.debug('loading dataset: [%03d, %s]', count, filename)
-        train_data_path = os.path.join(train_data_dir, filename)
-        chunk_train_data_df = pd.read_feather(train_data_path)
-
-        if count == 0:
-            train_df = chunk_train_data_df
-        else:
-            train_df = pd.concat([train_df, chunk_train_data_df], 0, ignore_index=True)
-        logging.debug('train_df.shape %s', train_df.shape)
-
-    train_df_label = train_df['fare_amount']
-    train_df.drop(columns=['key', 'fare_amount'], axis=1, inplace=True)
-    train_data_buffer = xgb.DMatrix(train_df, label=train_df_label)
-    del train_df
-    del train_df_label
 
     logging.debug('training model...')
     xgb_model = xgb.train(param['model_param'],
-                          train_data_buffer,
+                          train_data,
                           num_round,
                           eval_list,
+                          early_stopping_rounds=early_stop_rounds,
                           evals_result=progress_info)
     logging.debug('done!')
 

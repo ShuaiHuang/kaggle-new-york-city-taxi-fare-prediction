@@ -15,7 +15,7 @@
 |dropoff_latitude|Y|下车地点纬度|-|-|
 |passenger_count|Y|乘客人数|-|-|
 |pickup_datetime_obj|N|将`pickup_datetime`字符串格式化为`datetime`对象的结果|20180902|-|
-|pickup_timezone|N|上车时间的时区|20180902|-|
+|~~pickup_timezone~~|N|上车时间的时区|20180902|-|
 |pickup_year|N|上车日期的年份|20180902|-|
 |pickup_month|N|上车日期的月份|20180902|-|
 |pickup_day|N|上车日期的天数|20180902|-|
