@@ -73,24 +73,24 @@ def parse_date_time(data_frame):
 def extract_airport_location(data_frame):
     # New York JohnFitzgerald Kennedy International Airport
     data_frame['airport_jfk'] = 0
-    data_frame.loc[(data_frame['pickup_longitude'] >= -73.7841) & (data_frame['pickup_longitude'] <= -73.7721) & \
-                   (data_frame['pickup_latitude'] <= 40.6613) & (data_frame['pickup_latitude'] >= 40.6213),'airport_jfk'] = 1
-    data_frame.loc[(data_frame['dropoff_longitude'] >= -73.7841) & (data_frame['dropoff_longitude'] <= -73.7721) & \
-                   (data_frame['dropoff_latitude'] <= 40.6613) & (data_frame['dropoff_latitude'] >= 40.6213), 'airport_jfk'] = 1
+    data_frame.loc[(data_frame['pickup_longitude'].between(-73.7841, -73.7721)) & \
+                   (data_frame['pickup_latitude'].between(40.6613, 40.6213)),'airport_jfk'] = 1
+    data_frame.loc[(data_frame['dropoff_longitude'].between(-73.7841, -73.7721)) & \
+                   (data_frame['dropoff_latitude'].between(40.6613, 40.6213)), 'airport_jfk'] = 1
 
     # LaGuardia Airport
     data_frame['airport_lga'] = 0
-    data_frame.loc[(data_frame['pickup_longitude'] >= -73.8870) & (data_frame['pickup_longitude'] <= -73.8580) & \
-                   (data_frame['pickup_latitude'] <= 40.7800) & (data_frame['pickup_latitude'] >= 40.7680),'airport_lga'] = 1
-    data_frame.loc[(data_frame['dropoff_longitude'] >= -73.8870) & (data_frame['dropoff_longitude'] <= -73.8580) & \
-                   (data_frame['dropoff_latitude'] <= 40.7800) & (data_frame['dropoff_latitude'] >= 40.7680), 'airport_lga'] = 1
+    data_frame.loc[(data_frame['pickup_longitude'].between(-73.8870, -73.8580)) & \
+                   (data_frame['pickup_latitude'].between(40.7800, 40.7680)),'airport_lga'] = 1
+    data_frame.loc[(data_frame['dropoff_longitude'].between(-73.8870, -73.8580)) & \
+                   (data_frame['dropoff_latitude'].between(40.7800, 40.7680)), 'airport_lga'] = 1
 
     # Newark Liberty International Airport
     data_frame['airport_ewr'] = 0
-    data_frame.loc[(data_frame['pickup_longitude'] >= -74.192) & (data_frame['pickup_longitude'] <= -74.172) & \
-                   (data_frame['pickup_latitude'] <= 40.708) & (data_frame['pickup_latitude'] >= 40.676),'airport_ewr'] = 1
-    data_frame.loc[(data_frame['dropoff_longitude'] >= -74.192) & (data_frame['dropoff_longitude'] <= -74.172) & \
-                   (data_frame['dropoff_latitude'] <= 40.708) & (data_frame['dropoff_latitude'] >= 40.676), 'airport_ewr'] = 1
+    data_frame.loc[(data_frame['pickup_longitude'].between(-74.192, -74.172)) & \
+                   (data_frame['pickup_latitude'].between(40.708, 40.676)),'airport_ewr'] = 1
+    data_frame.loc[(data_frame['dropoff_longitude'].between(-74.192, -74.172)) & \
+                   (data_frame['dropoff_latitude'].between(40.708, 40.676)), 'airport_ewr'] = 1
 
     data_frame.loc[(data_frame['airport_jfk'] == 1) & (data_frame['drop_flag'] == DROP_FLAG_DEFAULT), 'drop_flag'] = DROP_FLAG_SELECTED
     data_frame.loc[(data_frame['airport_lga'] == 1) & (data_frame['drop_flag'] == DROP_FLAG_DEFAULT), 'drop_flag'] = DROP_FLAG_SELECTED
@@ -103,17 +103,13 @@ def clean_invalid_records(data_frame):
     if 'fare_amount' in data_frame.columns:
         data_frame.loc[data_frame['fare_amount'] <= 0, 'drop_flag'] = DROP_FLAG_INVALID_FARE
 
-    data_frame.loc[(data_frame['passenger_count'] <= 0) | (data_frame['passenger_count'] >= 9),
+    data_frame.loc[~data_frame['passenger_count'].between(1, 8),
                    'drop_flag'] = DROP_FLAG_INVALID_PASSENGER
 
-    data_frame.loc[(data_frame['pickup_latitude'] < -90) | (data_frame['pickup_latitude'] > 90),
-                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
-    data_frame.loc[(data_frame['pickup_longitude'] < -180) | (data_frame['pickup_longitude'] > 180),
-                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
-    data_frame.loc[(data_frame['dropoff_latitude'] < -90) | (data_frame['dropoff_latitude'] > 90),
-                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
-    data_frame.loc[(data_frame['dropoff_longitude'] < -180) | (data_frame['dropoff_longitude'] > -180),
-                   'drop_flag'] = DROP_FLAG_INVALID_VALUE
+    data_frame.loc[~data_frame['pickup_latitude'].between(-90, 90), 'drop_flag'] = DROP_FLAG_INVALID_VALUE
+    data_frame.loc[~data_frame['pickup_longitude'].between(-180, 180), 'drop_flag'] = DROP_FLAG_INVALID_VALUE
+    data_frame.loc[~data_frame['dropoff_latitude'].between(-90, 90), 'drop_flag'] = DROP_FLAG_INVALID_VALUE
+    data_frame.loc[~data_frame['dropoff_longitude'].between(-180, 180), 'drop_flag'] = DROP_FLAG_INVALID_VALUE
 
     data_frame.loc[(data_frame['pickup_longitude'] == 0) & (data_frame['pickup_latitude'] == 0),
                    'drop_flag'] = DROP_FLAG_INVALID_LOCATION
@@ -149,37 +145,50 @@ def haversine_distance(lat1, long1, lat2, long2):
     d = (R * c)  # in kilometers
     return d
 
+
 def add_drop_flag_column(data_frame):
     data_frame['drop_flag'] = DROP_FLAG_DEFAULT
     return data_frame
 
+
 def set_weekend_flag(data_frame):
     data_frame['pickup_is_weekend'] = 0
-    data_frame.loc[(data_frame['pickup_weekday'] == 5) | (data_frame['pickup_weekday'] == 6),
+    data_frame.loc[data_frame['pickup_weekday'].between(5, 6),
                    'pickup_is_weekend'] = 1
     return data_frame
 
 
 def set_night_flag(data_frame):
     data_frame['pickup_is_night'] = 0
-    data_frame.loc[(data_frame['pickup_hour'] >= 20) & (data_frame['pickup_hour'] <= 23), 'pickup_is_night'] = 1
-    data_frame.loc[(data_frame['pickup_hour'] >= 0) & (data_frame['pickup_hour'] < 6), 'pickup_is_night'] = 1
+    data_frame.loc[data_frame['pickup_hour'].between(20, 23), 'pickup_is_night'] = 1
+    data_frame.loc[data_frame['pickup_hour'].between(0, 6), 'pickup_is_night'] = 1
     return data_frame
 
 
 def set_weekday_rush_hour_flag(data_frame):
     data_frame['pickup_is_rush_hour'] = 0
-    data_frame.loc[(data_frame['pickup_weekday'] >= 0) & (data_frame['pickup_weekday'] <= 4) &
-                   (data_frame['pickup_hour'] >= 16) & (data_frame['pickup_hour'] < 20), 'pickup_is_rush_hour'] = 1
+    data_frame.loc[(data_frame['pickup_weekday'].between(0, 4)) &
+                   (data_frame['pickup_hour'].between(16, 19)), 'pickup_is_rush_hour'] = 1
     return data_frame
 
 
-def set_order_cancled_flag(data_frame):
-    data_frame['is_order_cancled'] = 0
+def set_order_cancelled_flag(data_frame):
+    data_frame['is_order_cancelled'] = 0
     data_frame.loc[(data_frame['pickup_longitude'] != 0) & (data_frame['pickup_latitude'] != 0) &
                    (data_frame['pickup_longitude'] == data_frame['dropoff_longitude']) &
                    (data_frame['pickup_latitude'] == data_frame['dropoff_latitude']),
-                    'is_order_cancled'] = 1
+                    'is_order_cancelled'] = 1
+    return data_frame
+
+
+def clean_records_out_of_new_york(data_frame):
+    outlier = ~data_frame['pickup_latitude'].between(37, 45)
+    outlier |= ~data_frame['pickup_longitude'].between(-76, -69)
+    outlier |= ~data_frame['dropoff_latitude'].between(37, 45)
+    outlier |= ~data_frame['dropoff_longitude'].between(-76, -69)
+
+    data_frame.loc[outlier & (data_frame['drop_flag'] == DROP_FLAG_DEFAULT), 'drop_flag'] = DROP_FLAG_INVALID_LOCATION
+
     return data_frame
 
 
@@ -217,7 +226,8 @@ if __name__ == '__main__':
         reg_exp = r'chunk.*\.csv|test.csv'
     chunk_files = get_chunk_files(data_dir, reg_exp)
     logging.debug(chunk_files)
-    # chunk_files=['chunk_000_train.feather', 'test.feather']
+    # chunk_files=['chunk_011_train.feather', 'test.feather']
+    # chunk_files=['test.feather']
     for file in chunk_files:
         file_path = os.path.join(data_dir, file)
         output_file_path = get_output_file_path(file_path, data_dir, FLAGS.output_data_formation)
@@ -225,14 +235,15 @@ if __name__ == '__main__':
         logging.debug('cleaning %s'%(file_path,))
         df = add_drop_flag_column(df)
         df = parse_date_time(df)
-        df = extract_airport_location(df)
-        df = calculate_distance(df)
         df = set_weekend_flag(df)
         df = set_weekday_rush_hour_flag(df)
-        df = set_order_cancled_flag(df)
         df = set_night_flag(df)
+        df = set_order_cancelled_flag(df)
+        df = extract_airport_location(df)
+        df = calculate_distance(df)
         if 'test' not in file:
             df = clean_invalid_records(df)
+            df = clean_records_out_of_new_york(df)
         write_data_frame_to_file(df, output_file_path, FLAGS.output_data_formation)
         end_time = dt.datetime.now()
         logging.debug('done in %s'%(end_time-start_time,))
