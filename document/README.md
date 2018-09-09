@@ -78,3 +78,10 @@
 - [x] 对地理位置信息进行抽取, 清洗掉明显不属于纽约市区的记录(注意保留与机场相关的记录);
 - [ ] 对训练集和验证集进行采样, 使用采样结果进行训练;
 - [ ] 使用TensorFlow构造神经网络模型.
+
+### 如何加速特征抽取
+
+目前特征提取步骤越来越复杂, 特征提取时间越来越长(大约2h+). 从System Monitor中可以看到, 只有一个CPU核在工作, 如果使用并行化处理方式的话, 可以缩短特征提取所耗费的时间.
+
+- [并行化 Python 中的 map, apply 等函数，aka 最简单的 Python 并行方案（示例及时间对比）](http://blog.fangzhou.me/posts/2017-07-02.html)
+- [multiprocessing — Process-based parallelism](https://docs.python.org/3.7/library/multiprocessing.html)
