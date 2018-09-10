@@ -86,7 +86,7 @@
 - [并行化 Python 中的 map, apply 等函数，aka 最简单的 Python 并行方案（示例及时间对比）](http://blog.fangzhou.me/posts/2017-07-02.html)
 - [multiprocessing — Process-based parallelism](https://docs.python.org/3.7/library/multiprocessing.html)
 
-### 总结与计划(By Solomon)
+### 总结与计划 (By Solomon)
 
 本周的主要进展如下:
 - 完善时间特征, 将原始的UTC时间转换成美国东部时间, 并加入了夏令时;
@@ -97,3 +97,14 @@
 - 花费三天时间, 每天研究一个排名靠前的kernel, 重点关注如何进行EDA, 如何在EDA基础上设计特征, 如何进行特征选择, 模型参数调整的trick;
 - 对于数据清洗和特征工程脚本, 引入并行化策略, 加速脚本运行速率;
 - 考察新模型应用于此项目的可行性.
+
+## 20180910
+
+### Kernel分析(1)
+
+[Top Ten Rank - R 22M Rows(2.90) LightGBM
+](https://www.kaggle.com/jsylas/top-ten-rank-r-22m-rows-2-90-lightgbm)
+
+### Kernel分析(2)
+
+[A Walkthrough and a Challenge](https://www.kaggle.com/willkoehrsen/a-walkthrough-and-a-challenge)
