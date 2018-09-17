@@ -10,6 +10,7 @@ from pytz import timezone
 
 class DataCleaner(object):
 
+
     def __init__(self, data_dir, raw_data_dir, processing_data_dir, training_data_dir, train_data_path, test_data_path):
         self.__data_dir = data_dir
         self.__raw_data_dir = raw_data_dir
@@ -17,6 +18,14 @@ class DataCleaner(object):
         self.__training_data_dir = training_data_dir
         self.__train_data_path = train_data_path
         self.__test_data_path = test_data_path
+
+        self.__jfk_coord = {'longitude': (-73.778889 * np.pi) / 180, 'latitude': (40.639722 * np.pi) / 180}
+        self.__ewr_coord = {'longitude': (-74.168611 * np.pi)/180, 'latitude': (40.6925 * np.pi)/180}
+        self.__lga_coord = {'longitude': (-73.872611 * np.pi)/180, 'latitude': (40.77725 * np.pi)/180}
+        self.__liberty_statue_coord = {'longitude': (-74.0445 * np.pi)/180, 'latitude': (40.6892 * np.pi)/180}
+        self.__nyc_coord = {'longitude': (-74.0063889 * np.pi)/180, 'latitude': (40.7141667 * np.pi)/180}
+
+        self.__radius_earth = 6371
 
     def load_dataset(self, nrows=10_000_000):
         train_stem = self.__train_data_path.stem
@@ -90,15 +99,15 @@ class DataCleaner(object):
             lambda x: x.astimezone(new_york_timezone))
         return data_frame
 
-    def parse_location(self):
+    def parse_coordinate(self):
         self.__train_df.loc[:, 'pickup_longitude'] = self.__convert_degree_to_raidus(
             self.__train_df['pickup_longitude'])
         self.__train_df.loc[:, 'pickup_latitude'] = self.__convert_degree_to_raidus(
             self.__train_df['pickup_latitude'])
         self.__train_df.loc[:, 'dropoff_longitude'] = self.__convert_degree_to_raidus(
             self.__train_df['dropoff_longitude'])
-        self.__train_df.loc[:, 'dropoff_longitude'] = self.__convert_degree_to_raidus(
-            self.__train_df['dropoff_longitude'])
+        self.__train_df.loc[:, 'dropoff_latitude'] = self.__convert_degree_to_raidus(
+            self.__train_df['dropoff_latitude'])
 
         self.__test_df.loc[:, 'pickup_longitude'] = self.__convert_degree_to_raidus(
             self.__test_df['pickup_longitude'])
@@ -106,20 +115,168 @@ class DataCleaner(object):
             self.__test_df['pickup_latitude'])
         self.__test_df.loc[:, 'dropoff_longitude'] = self.__convert_degree_to_raidus(
             self.__test_df['dropoff_longitude'])
-        self.__test_df.loc[:, 'dropoff_longitude'] = self.__convert_degree_to_raidus(
-            self.__test_df['dropoff_longitude'])
+        self.__test_df.loc[:, 'dropoff_latitude'] = self.__convert_degree_to_raidus(
+            self.__test_df['dropoff_latitude'])
 
         self.__train_df['longitude_delta'] = self.__train_df['dropoff_longitude'] - self.__train_df['pickup_longitude']
-        self.__train_df['latitude_delta'] = self.__train_df['dropoff_latitude'] - self.__train_df['pickup_longitude']
+        self.__train_df['latitude_delta'] = self.__train_df['dropoff_latitude'] - self.__train_df['pickup_latitude']
 
-    def __get_haversine_distance(self):
-        pass
+        self.__test_df['longitude_delta'] = self.__test_df['dropoff_longitude'] - self.__test_df['pickup_longitude']
+        self.__test_df['latitude_delta'] = self.__test_df['dropoff_latitude'] - self.__test_df['pickup_latitude']
 
-    def __get_bearing_distance(self):
-        pass
+        self.__train_df['haver_dist'] = self.__get_haversine_distance(self.__train_df)
+        self.__test_df['haver_dist'] = self.__get_haversine_distance(self.__test_df)
 
-    def __get_sphere_distance(self):
-        pass
+        self.__train_df['bear_dist'] = self.__get_bearing_distance(self.__train_df)
+        self.__test_df['bear_dist'] = self.__get_bearing_distance(self.__test_df)
+
+        self.__train_df['jfk_dist'] = self.__train_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__jfk_coord['latitude'],
+                self.__jfk_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__jfk_coord['latitude'],
+                self.__jfk_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+        self.__test_df['jfk_dist'] = self.__test_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__jfk_coord['latitude'],
+                self.__jfk_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__jfk_coord['latitude'],
+                self.__jfk_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+
+        self.__train_df['ewr_dist'] = self.__train_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__ewr_coord['latitude'],
+                self.__ewr_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__ewr_coord['latitude'],
+                self.__ewr_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+        self.__test_df['ewr_dist'] = self.__test_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__ewr_coord['latitude'],
+                self.__ewr_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__ewr_coord['latitude'],
+                self.__ewr_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+
+        self.__train_df['lga_dist'] = self.__train_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__lga_coord['latitude'],
+                self.__lga_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__lga_coord['latitude'],
+                self.__lga_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+        self.__test_df['lga_dist'] = self.__test_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__lga_coord['latitude'],
+                self.__lga_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__lga_coord['latitude'],
+                self.__lga_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+
+        self.__train_df['liberty_dist'] = self.__train_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__liberty_statue_coord['latitude'],
+                self.__liberty_statue_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__liberty_statue_coord['latitude'],
+                self.__liberty_statue_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+        self.__test_df['liberty_dist'] = self.__test_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__liberty_statue_coord['latitude'],
+                self.__liberty_statue_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__liberty_statue_coord['latitude'],
+                self.__liberty_statue_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+
+        self.__train_df['nyc_dist'] = self.__train_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__nyc_coord['latitude'],
+                self.__nyc_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__nyc_coord['latitude'],
+                self.__nyc_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+        self.__test_df['nyc_dist'] = self.__test_df.apply(
+            lambda x:
+            self.__get_sphere_distance(
+                x['pickup_latitude'],
+                x['pickup_longitude'],
+                self.__nyc_coord['latitude'],
+                self.__nyc_coord['longitude']) +
+            self.__get_sphere_distance(
+                self.__nyc_coord['latitude'],
+                self.__nyc_coord['longitude'],
+                x['dropoff_latitude'],
+                x['dropoff_longitude']),
+            axis=1)
+
+    def __get_haversine_distance(self, data_frame):
+        return 2 * self.__radius_earth * np.arcsin(np.sqrt(np.sin(data_frame['latitude_delta'] / 2) ** 2 + np.cos(data_frame['pickup_latitude']) * np.cos(data_frame['dropoff_latitude']) * np.sin(data_frame['longitude_delta'] / 2) ** 2))
+
+    def __get_bearing_distance(self, data_frame):
+        return np.arctan2(np.sin(-data_frame['longitude_delta'] * np.cos(data_frame['dropoff_latitude'])),
+                          np.cos(data_frame['pickup_latitude'] * np.sin(data_frame['dropoff_latitude'])) - np.sin(data_frame['pickup_latitude']) * np.cos(data_frame['dropoff_latitude']) * np.cos(-data_frame['longitude_delta']))
+
+    def __get_sphere_distance(self, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude):
+        lat_delta = dropoff_latitude - pickup_latitude
+        lon_delta = dropoff_longitude - pickup_longitude
+
+        return 2 * self.__radius_earth * np.arcsin(np.sqrt(np.sin(lat_delta / 2) ** 2 + np.cos(pickup_latitude) * np.cos(dropoff_latitude) * np.sin(lon_delta / 2) ** 2))
 
     def __convert_degree_to_raidus(self, series):
         return series / 180 * np.pi
@@ -198,4 +355,5 @@ if __name__ == '__main__':
     data_cleaner.load_dataset(nrows=100)
     # data_cleaner.load_dataset()
     data_cleaner.parse_datetime()
+    data_cleaner.parse_coordinate()
     data_cleaner.save_dataset()
