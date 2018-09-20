@@ -8,7 +8,7 @@
     "subsample": 0.2,
     "colsample_bytree": 0.3,
     "colsample_bylevel": 1,
-    "lambda": 20,
+    "lambda": 1,
     "alpha": 0,
     "tree_method": "gpu_hist",
     "objective": "reg:linear",

@@ -10,7 +10,6 @@ from pytz import timezone
 
 class DataCleaner(object):
 
-
     def __init__(self, data_dir, raw_data_dir, processing_data_dir, training_data_dir, train_data_path, test_data_path):
         self.__data_dir = data_dir
         self.__raw_data_dir = raw_data_dir
@@ -71,6 +70,33 @@ class DataCleaner(object):
         self.__test_df['pickup_seconds_in_day'] = self.__extract_seconds_in_day(self.__test_df)
         self.__test_df['pickup_seconds_sin'] = np.sin(2 * np.pi * self.__test_df['pickup_seconds_in_day'] / 86400)
         self.__test_df['pickup_seconds_cos'] = np.cos(2 * np.pi * self.__test_df['pickup_seconds_in_day'] / 86400)
+
+        self.__train_df['pickup_weekday_sin'] = np.sin(2 * np.pi * self.__train_df['pickup_weekday'] / 7)
+        self.__train_df['pickup_weekday_cos'] = np.cos(2 * np.pi * self.__train_df['pickup_weekday'] / 7)
+
+        self.__test_df['pickup_weekday_sin'] = np.sin(2 * np.pi * self.__test_df['pickup_weekday'] / 7)
+        self.__test_df['pickup_weekday_cos'] = np.cos(2 * np.pi * self.__test_df['pickup_weekday'] / 7)
+
+        self.__train_df = self.__get_time_class(self.__train_df)
+        self.__test_df = self.__get_time_class(self.__test_df)
+
+    def __get_time_class(self, data_frame):
+        '''
+        [0, 8): overnight - 0
+        [8, 12): morning - 1
+        [12, 16): afternoon - 2
+        [16, 20): rush-hour - 3
+        [20, 23]: night - 4
+        :param data_frame:
+        :return:
+        '''
+        data_frame['pickup_time_class'] = 0
+        data_frame.loc[data_frame['pickup_hour'].between(0, 7), 'pickup_time_class'] = 0
+        data_frame.loc[data_frame['pickup_hour'].between(8, 11), 'pickup_time_class'] = 1
+        data_frame.loc[data_frame['pickup_hour'].between(12, 15), 'pickup_time_class'] = 2
+        data_frame.loc[data_frame['pickup_hour'].between(16, 19), 'pickup_time_class'] = 3
+        data_frame.loc[data_frame['pickup_hour'].between(20, 23), 'pickup_time_class'] = 4
+        return data_frame
 
     def __extract_days_in_year(self, date):
         date_delta = date - dt.datetime(year=date.year, month=1, day=1, tzinfo=date.tzinfo)
@@ -281,6 +307,23 @@ class DataCleaner(object):
     def __convert_degree_to_raidus(self, series):
         return series / 180 * np.pi
 
+    def clean_outlier(self):
+        '''
+        0 - reserved
+        1 - fare_amount outlier
+        2 - coordinate outlier
+        3 - passenger_count outlier
+        :return:
+        '''
+        self.__train_df['reserved_flag'] = 0
+
+        self.__train_df.loc[~(self.__train_df['fare_amount'].between(2.5, 500)), 'reserved_flag'] = 1
+        self.__train_df.loc[~(self.__train_df['pickup_latitude'].between(35, 45)), 'reserved_flag'] = 2
+        self.__train_df.loc[~(self.__train_df['pickup_longitude'].between(-80, -70)), 'reserved_flag'] = 2
+        self.__train_df.loc[~(self.__train_df['dropoff_latitude'].between(35, 45)), 'reserved_flag'] = 2
+        self.__train_df.loc[~(self.__train_df['dropoff_longitude'].between(-80, -70)), 'reserved_flag'] = 2
+        self.__train_df.loc[~(self.__train_df['passenger_count'].between(0, 9)), 'reserved_flag'] = 3
+
     def save_dataset(self):
         train_stem = self.__train_data_path.stem
         converted_train_filename = f'cleaned_{train_stem}.feather'
@@ -352,8 +395,9 @@ if __name__ == '__main__':
 
     data_cleaner = DataCleaner(DATA_DIR, RAW_DATA_DIR, PROCESSING_DATA_DIR,
                                TRAINING_DATA_DIR, TRAIN_DATA_PATH, TEST_DATA_PATH)
-    data_cleaner.load_dataset(nrows=100)
-    # data_cleaner.load_dataset()
+    # data_cleaner.load_dataset(nrows=100)
+    data_cleaner.load_dataset()
+    data_cleaner.clean_outlier()
     data_cleaner.parse_datetime()
     data_cleaner.parse_coordinate()
     data_cleaner.save_dataset()

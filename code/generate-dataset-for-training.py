@@ -28,25 +28,38 @@ def get_data_frame(file_path, input_is_feather):
     return df
 
 
-def convert_data_formation(data_frame):
+def select_feature_columns(data_frame):
     columns_to_keep = ['key', 'pickup_longitude', 'pickup_latitude',
                        'dropoff_longitude', 'dropoff_latitude', 'passenger_count',
-                       'pickup_year', 'pickup_month', 'pickup_day',
-                       'pickup_weekday', 'pickup_hour', 'pickup_dropoff_distance',
-                       'airport_jfk', 'airport_lga', 'airport_ewr',
-                       'pickup_is_weekend', 'pickup_is_night', 'pickup_is_rush_hour',
-                       'is_order_cancelled']
+                       'pickup_year', 'pickup_days_sin',
+                       'pickup_days_cos', 'pickup_seconds_sin', 'pickup_seconds_cos',
+                       'pickup_weekday_sin', 'pickup_weekday_cos', 'pickup_time_class',
+                       'haver_dist', 'bear_dist',
+                       'jfk_dist', 'ewr_dist', 'lga_dist', 'liberty_dist', 'nyc_dist']
     if 'fare_amount'in data_frame.columns:
         columns_to_keep.append('fare_amount')
     data_frame = data_frame.filter(columns_to_keep)
-
-    dummy_columns = ['pickup_year', 'pickup_month', 'pickup_day', 'pickup_weekday', 'pickup_hour']
-    data_frame = pd.get_dummies(data_frame, columns=dummy_columns)
     return data_frame
+
+
+def drop_outlier_records(data_frame):
+    data_frame = data_frame[data_frame['reserved_flag'] == 0]
+    return data_frame
+
+
+def process_dummy_feature(train_df, test_df):
+    merged_df = pd.concat([train_df, test_df], ignore_index=True, copy=False, sort=False)
+
+    dummy_columns = ['pickup_year', 'pickup_time_class']
+    merged_df = pd.get_dummies(merged_df, columns=dummy_columns)
+    train_df = merged_df[merged_df['key'].isin(train_df['key'])]
+    test_df = merged_df[merged_df['key'].isin(test_df['key'])]
+    return train_df, test_df
 
 
 def write_data_frame(data_frame, file_path, output_is_feather):
     if output_is_feather:
+        data_frame.reset_index(drop=True, inplace=True)
         data_frame.to_feather(file_path)
     else:
         data_frame.to_csv(file_path, index=False)
@@ -93,36 +106,27 @@ if __name__ == '__main__':
     logging.debug('INPUT_FORMATION_IS_FEATHER=%s', INPUT_FORMATION_IS_FEATHER)
     logging.debug('OUTPUT_FORMATION_IS_FEATHER=%s', OUTPUT_FORMATION_IS_FEATHER)
 
-    data_file_list = get_cleaned_file_list(process_data_dir, INPUT_FORMATION_IS_FEATHER)
-    logging.debug(data_file_list)
+    df_for_train = pd.read_feather(os.path.join(process_data_dir, 'cleaned_train.feather'))
+    df_for_test = pd.read_feather(os.path.join(process_data_dir, 'cleaned_test.feather'))
 
-    sampled_df_for_train = pd.DataFrame()
-    df_for_test = None
-    for filename in data_file_list:
-        logging.debug('processing file: %s', filename)
-        file_path = os.path.join(process_data_dir, filename)
-        df = get_data_frame(file_path, INPUT_FORMATION_IS_FEATHER)
-        if 'test' not in filename:
-            reserved_df = df[df['drop_flag'] < 0]
-            sampled_df = df[df['drop_flag'] == 0].sample(frac=0.1, random_state=43)
-            sampled_df_for_train = pd.concat([sampled_df_for_train, reserved_df, sampled_df], ignore_index=True, copy=False)
-        else:
-            df_for_test = df
+    logging.debug(df_for_train.shape)
+    logging.debug(df_for_train.columns)
+    logging.debug(df_for_train.dtypes)
 
-    # sampled_df_for_train.drop(index=sampled_df_for_train.loc[sampled_df_for_train['pickup_year']==2008, :].index, inplace=True)
-    # sampled_df_for_train.reset_index(drop=True, inplace=True)
+    df_for_train = drop_outlier_records(df_for_train)
+    df_for_train = select_feature_columns(df_for_train)
+    df_for_test = select_feature_columns(df_for_test)
+    df_for_train, df_for_test = process_dummy_feature(df_for_train, df_for_test)
 
-    sampled_df_for_train = convert_data_formation(sampled_df_for_train)
     output_file_path = os.path.join(train_data_dir, 'cleaned_train.feather')
-    write_data_frame(sampled_df_for_train, output_file_path, OUTPUT_FORMATION_IS_FEATHER)
+    write_data_frame(df_for_train, output_file_path, OUTPUT_FORMATION_IS_FEATHER)
     logging.debug('save file: %s', output_file_path)
 
-    df_for_test = convert_data_formation(df_for_test)
     output_file_path = os.path.join(train_data_dir, 'cleaned_test.feather')
     write_data_frame(df_for_test, output_file_path, OUTPUT_FORMATION_IS_FEATHER)
     logging.debug('save file: %s', output_file_path)
 
-    logging.debug(sampled_df_for_train.shape)
-    logging.debug(sampled_df_for_train.columns)
+    logging.debug(df_for_train.shape)
+    logging.debug(df_for_train.columns)
     logging.debug(df_for_test.shape)
     logging.debug(df_for_test.columns)

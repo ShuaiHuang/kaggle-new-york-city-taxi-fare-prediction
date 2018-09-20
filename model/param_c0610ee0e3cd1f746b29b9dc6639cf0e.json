@@ -1,22 +1,22 @@
 {
   "model_param": {
-    "eta": 0.3,
-    "gamma": 5,
-    "max_depth": 4,
-    "min_child_weight": 1,
+    "eta": 0.1,
+    "gamma": 0,
+    "max_depth": 10,
+    "min_child_weight": 5,
     "max_delta_step": 0,
-    "subsample": 0.2,
+    "subsample": 0.5,
     "colsample_bytree": 0.3,
     "colsample_bylevel": 1,
-    "lambda": 20,
+    "lambda": 10,
     "alpha": 0,
     "tree_method": "gpu_hist",
     "objective": "reg:linear",
     "eval_metric": "rmse",
-    "nthread": 12,
+    "nthread": 6,
     "silent": 0,
     "seed": 43
   },
-  "num_round": 10000,
-  "early_stop_rounds": 100
+  "num_round": 1000,
+  "early_stop_rounds": null
 }
