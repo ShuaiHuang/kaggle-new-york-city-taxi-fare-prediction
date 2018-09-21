@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import datetime as dt
+import matplotlib.path as MatPltPath
 from pathlib import Path
 from pytz import timezone
 
@@ -25,6 +26,11 @@ class DataCleaner(object):
         self.__nyc_coord = {'longitude': (-74.0063889 * np.pi)/180, 'latitude': (40.7141667 * np.pi)/180}
 
         self.__radius_earth = 6371
+        self.__manhattan_path = MatPltPath.Path(
+            [[40.698, -74.019], [40.757, -74.014], [40.881745, -73.934875],
+             [40.872186, -73.909654], [40.834051, -73.934120], [40.809238, -73.933307],
+             [40.798337, -73.927591], [40.773668, -73.941674], [40.741346, -73.966607],
+             [40.707832, -73.974694]])
 
     def load_dataset(self, nrows=10_000_000):
         train_stem = self.__train_data_path.stem
@@ -126,6 +132,9 @@ class DataCleaner(object):
         return data_frame
 
     def parse_coordinate(self):
+        self.__train_df = self.__coordinate_is_in_mahattan(self.__train_df)
+        self.__test_df = self.__coordinate_is_in_mahattan(self.__test_df)
+
         self.__train_df.loc[:, 'pickup_longitude'] = self.__convert_degree_to_raidus(
             self.__train_df['pickup_longitude'])
         self.__train_df.loc[:, 'pickup_latitude'] = self.__convert_degree_to_raidus(
@@ -306,6 +315,25 @@ class DataCleaner(object):
 
     def __convert_degree_to_raidus(self, series):
         return series / 180 * np.pi
+
+    def __point_is_in_region(self, x, y, path):
+        return path.contains_point([x, y])
+
+    def __coordinate_is_in_mahattan(self, data_frame):
+        data_frame['pickup_mha'] = np.vectorize(self.__point_is_in_region)(
+            data_frame['pickup_latitude'],
+            data_frame['pickup_longitude'],
+            self.__manhattan_path)
+        data_frame['dropoff_mha'] = np.vectorize(self.__point_is_in_region)(
+            data_frame['dropoff_latitude'],
+            data_frame['dropoff_longitude'],
+            self.__manhattan_path)
+        data_frame['mha_flag'] = data_frame['pickup_mha'] & data_frame['dropoff_mha']
+
+        data_frame['pickup_mha'] = data_frame['pickup_mha'].astype(int)
+        data_frame['dropoff_mha'] = data_frame['dropoff_mha'].astype(int)
+        data_frame['mha_flag'] = data_frame['mha_flag'].astype(int)
+        return data_frame
 
     def clean_outlier(self):
         '''
