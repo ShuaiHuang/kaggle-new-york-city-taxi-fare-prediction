@@ -34,7 +34,7 @@ def select_feature_columns(data_frame):
                        'pickup_year', 'pickup_days_sin',
                        'pickup_days_cos', 'pickup_seconds_sin', 'pickup_seconds_cos',
                        'pickup_weekday_sin', 'pickup_weekday_cos', 'pickup_time_class',
-                       'haver_dist', 'bear_dist',
+                       'haver_dist', 'bear_dist', 'mha_flag',
                        'jfk_dist', 'ewr_dist', 'lga_dist', 'liberty_dist', 'nyc_dist']
     if 'fare_amount'in data_frame.columns:
         columns_to_keep.append('fare_amount')

@@ -58,6 +58,7 @@ class DataCleaner(object):
         logging.debug('done!')
 
     def parse_datetime(self):
+        logging.debug('parse_datetime')
         self.__train_df = self.__extract_datetime_fields(self.__train_df)
         self.__test_df = self.__extract_datetime_fields(self.__test_df)
 
@@ -132,6 +133,7 @@ class DataCleaner(object):
         return data_frame
 
     def parse_coordinate(self):
+        logging.debug('parse_coordinate')
         self.__train_df = self.__coordinate_is_in_mahattan(self.__train_df)
         self.__test_df = self.__coordinate_is_in_mahattan(self.__test_df)
 
@@ -353,6 +355,7 @@ class DataCleaner(object):
         self.__train_df.loc[~(self.__train_df['passenger_count'].between(0, 9)), 'reserved_flag'] = 3
 
     def save_dataset(self):
+        logging.debug('save_dataset')
         train_stem = self.__train_data_path.stem
         converted_train_filename = f'cleaned_{train_stem}.feather'
         converted_train_path = self.__processing_data_dir / converted_train_filename
